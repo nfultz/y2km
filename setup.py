@@ -38,7 +38,7 @@ setup(
     include_package_data=True,
     keywords='y2km',
     name='y2km',
-    packages=find_packages(include=['y2km', 'y2km.*']),
+    py_modules= ['y2km'],
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
