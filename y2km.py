@@ -60,15 +60,12 @@ class Y2kmArray(pandas.api.extensions.ExtensionArray):
     def __len__(self):
         return len(self._m)    
     
-    def __eq__(self, other):
-        return self._m == other
-
     def nbytes(self):
         return self._m.nbytes + 32
     
     
     def isna(self):
-        return self._m.isna()
+        return numpy.isnan(self._m)
 
     def take(self, indices, allow_fill=False, fill_value=None):
         newValues = pandas.core.algorithms.take(self._m, indices, allow_fill=allow_fill, fill_value=fill_value)
@@ -79,8 +76,9 @@ class Y2kmArray(pandas.api.extensions.ExtensionArray):
     def copy(self):
         return Y2kmArray(self._m.copy())
     
-    def _concat_same_type(self, to_concat):
-        to_concat = (self._m, *[x._m for x in to_concat]) 
+    @classmethod
+    def _concat_same_type(cls, to_concat):
+        to_concat = [x._m for x in to_concat]
         
         return Y2kmArray(numpy.concatenate(to_concat))
     
@@ -107,18 +105,41 @@ class Y2kmArray(pandas.api.extensions.ExtensionArray):
         return cls(
             list(map(cls._string_to_y2km, strings))
         )
-     
+    
+    def astype(self, dtype, copy=True):
+        if dtype is str:
+            return numpy.array(
+                list(map(self._formatter(), self))
+            )
+        else:
+            return super().astype(dtype)
+
+    ## Comparison ops
+        
+    def __eq__(self, right):
+        if type(right) is str:
+            right = Y2kmArray._from_sequence_of_strings([right])
+        
+        return self._m == right
         
     def __lt__(self, right):
+        if type(right) is str:
+            right = Y2kmArray._from_sequence_of_strings([right])
+            
         return self._m < right._m
     
-    def __lte__(self, right):
-        return self._m <= right._m
+    def __le__(self, right):
+        return (self < right) | (self == right)
     
     def __gt__(self, right):
-        return self._m > right._m
-    def __gte__(self, right):
-        return self._m >= right._m
+        return ~(self <= right)
+    
+    def __ge__(self, right):
+        return ~(self < right)
+        
+    ## Math ops
+    
+    ## Return Y2kms when possible
         
     def __sub__(self, right):
         if(getattr(right, 'dtype', None) == self.dtype):
